@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Simple batsman icon - head -->
+  <circle cx="50" cy="20" r="8" fill="#333"/>
+  <!-- Body -->
+  <rect x="46" y="28" width="8" height="25" fill="#333"/>
+  <!-- Arms -->
+  <line x1="40" y1="35" x2="54" y2="35" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+  <!-- Legs -->
+  <line x1="46" y1="53" x2="42" y2="65" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+  <line x1="54" y1="53" x2="58" y2="65" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+  <!-- Bat -->
+  <line x1="58" y1="30" x2="75" y2="15" stroke="#8B4513" stroke-width="4" stroke-linecap="round"/>
+  <rect x="73" y="13" width="4" height="20" fill="#654321"/>
+</svg>
+

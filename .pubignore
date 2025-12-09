@@ -1,0 +1,10 @@
+# Files to exclude from pub.dev publishing
+# This file works similarly to .gitignore but specifically for pub.dev
+
+# Example app lock file (should not be published)
+example/pubspec.lock
+
+# Developer documentation (not needed for package users)
+PUBLISHING_GUIDE.md
+BETA_TESTING_GUIDE.md
+
