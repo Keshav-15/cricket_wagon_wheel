@@ -102,11 +102,9 @@ class WagonWheelPartitionPainter extends CustomPainter {
     final midAngle = (start + end) / 2;
 
     // Position for label center (configurable)
-    final minRadiusFactor =
-        textProperties.textMinRadiusFactor ??
+    final minRadiusFactor = textProperties.textMinRadiusFactor ??
         WagonWheelConstants.defaultTextMinRadiusFactor;
-    final maxRadiusFactor =
-        textProperties.textRadiusFactor ??
+    final maxRadiusFactor = textProperties.textRadiusFactor ??
         WagonWheelConstants.defaultTextRadiusFactor;
 
     // Ensure min is less than max, and clamp to valid range
@@ -203,8 +201,7 @@ class WagonWheelPartitionPainter extends CustomPainter {
     return TextStyle(
       fontSize: fontSize,
       color: textProperties.textColor ?? WagonWheelConstants.defaultTextColor,
-      fontWeight:
-          textProperties.textFontWeight ??
+      fontWeight: textProperties.textFontWeight ??
           WagonWheelConstants.defaultTextFontWeight,
     );
   }
@@ -219,11 +216,9 @@ class WagonWheelPartitionPainter extends CustomPainter {
     double start,
     double end,
   ) {
-    final bgColor =
-        animationProperties.selectedSectorBackgroundColor ??
+    final bgColor = animationProperties.selectedSectorBackgroundColor ??
         WagonWheelConstants.defaultSelectedSectorBackgroundColor;
-    final bgOpacity =
-        animationProperties.selectedSectorBackgroundOpacity ??
+    final bgOpacity = animationProperties.selectedSectorBackgroundOpacity ??
         WagonWheelConstants.defaultSelectedSectorBackgroundOpacity;
 
     final paint = Paint()
@@ -252,19 +247,15 @@ class WagonWheelPartitionPainter extends CustomPainter {
   void _drawSplash(Canvas canvas, Offset center, double start, double end) {
     if (splashAnimation == null) return;
 
-    final curve =
-        animationProperties.splashAnimationCurve ??
+    final curve = animationProperties.splashAnimationCurve ??
         WagonWheelConstants.defaultSplashAnimationCurve;
     final animatedProgress = curve.transform(splashAnimation!.value);
 
-    final splashCol =
-        animationProperties.splashColor ??
+    final splashCol = animationProperties.splashColor ??
         WagonWheelConstants.defaultSplashColor;
-    final maxRadiusFactor =
-        animationProperties.splashMaxRadius ??
+    final maxRadiusFactor = animationProperties.splashMaxRadius ??
         WagonWheelConstants.defaultSplashMaxRadius;
-    final maxOpacity =
-        animationProperties.splashOpacity ??
+    final maxOpacity = animationProperties.splashOpacity ??
         WagonWheelConstants.defaultSplashOpacity;
 
     // Material-like ripple: Fill entire sector with expanding/fading effect

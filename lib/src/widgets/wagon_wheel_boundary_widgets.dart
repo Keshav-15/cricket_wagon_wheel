@@ -1,5 +1,12 @@
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_batsman_properties.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_boundary_properties.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_circle_indicator_properties.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_ground_boundary_properties.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_leg_off_label_properties.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_pitch_properties.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_pitch_rectangle_properties.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_stadium_boundary_properties.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_thirty_yards_boundary_properties.dart';
 import 'package:cricket_wagon_wheel/src/utils/package_constants.dart';
 import 'package:cricket_wagon_wheel/src/widgets/wagon_wheel_batsman_builder.dart';
 import 'package:cricket_wagon_wheel/src/widgets/wagon_wheel_label_builder.dart';
@@ -34,23 +41,29 @@ class WagonWheelBoundaryWidgets {
     final pitchBorderSpacing = pitchProperties.calculateBorderSpacing(
       pitchSize,
     );
+    // Get categorized boundary properties with defaults
+    final stadiumProps = boundaryProperties.stadium ??
+        const WagonWheelStadiumBoundaryProperties();
+    final groundProps =
+        boundaryProperties.ground ?? const WagonWheelGroundBoundaryProperties();
+    final thirtyYardsProps = boundaryProperties.thirtyYards ??
+        const WagonWheelThirtyYardsBoundaryProperties();
+
     // Build boundaries with borders and ClipOval for proper clipping
     // Borders are applied on containers that wrap ClipOval to ensure borders are visible
     return _buildOvalContainer(
       size: stadiumBoundary,
-      color: boundaryProperties.stadiumBoundarySize <= 0
-          ? Colors.transparent
-          : boundaryProperties.stadiumBoundaryColor,
-      border: boundaryProperties.stadiumBoundaryBorder,
+      color: stadiumProps.size <= 0 ? Colors.transparent : stadiumProps.color,
+      border: stadiumProps.border,
       child: _buildOvalContainer(
         size: groundBoundary,
-        color: boundaryProperties.groundBoundaryColor,
-        border: boundaryProperties.groundBoundaryBorder,
+        color: groundProps.color,
+        border: groundProps.border,
         child: _buildBaseContainer(
           size: thirtyYardsBoundary,
-          color: boundaryProperties.thirtyYardsBoundaryColor,
+          color: thirtyYardsProps.color,
           borderRadius: BorderRadius.circular(thirtyYardsBoundary.height / 2),
-          border: boundaryProperties.thirtyYardsBoundaryBorder,
+          border: thirtyYardsProps.border,
           child: _buildPitch(
             thirtyYardsBoundary: thirtyYardsBoundary,
             pitchSize: pitchSize,
@@ -81,30 +94,24 @@ class WagonWheelBoundaryWidgets {
     required Size groundBoundarySize,
     required bool isLeftHanded,
   }) {
-    // If custom builder provided, use it (custom builder doesn't use showLegOffLabels)
-    if (pitchProperties.customPitchBuilder != null) {
-      return pitchProperties.customPitchBuilder!(pitchSize, groundBoundarySize);
+    // Get categorized properties with defaults
+    final pitchConfig = pitchProperties.pitchConfig ?? const WagonWheelPitchRectangleProperties();
+    final circleIndicator = pitchProperties.circleIndicator ?? const WagonWheelCircleIndicatorProperties();
+    final batsman = pitchProperties.batsman ?? const WagonWheelBatsmanProperties();
+    final legOffLabel = pitchProperties.legOffLabel ?? const WagonWheelLegOffLabelProperties();
+
+    // If custom builder provided, use it
+    if (pitchConfig.customBuilder != null) {
+      return pitchConfig.customBuilder!(pitchSize, groundBoundarySize);
     }
 
-    // Ensure showLegOffLabels is properly checked (defensive programming)
-    final shouldShowLabels = pitchProperties.showLegOffLabels;
+    final pitchColor = pitchConfig.color ?? const Color(0xFFD4A574); // Default beige/brown pitch color
 
-    final pitchColor =
-        pitchProperties.pitchColor ??
-        const Color(0xFFD4A574); // Default beige/brown pitch color
-
-    // Circle indicator properties
-    final showCircle = pitchProperties.showCircleIndicator;
-    final circleColor =
-        pitchProperties.circleIndicatorColor ??
-        WagonWheelPackageConstants.defaultWhatsAppColor;
-    final circleSize = pitchProperties.circleIndicatorSize ?? const Size(8, 8);
-    final circleSpacing =
-        pitchProperties.circleIndicatorSpacing ?? pitchBorderSpacing;
+    // Circle indicator spacing
+    final circleSpacing = circleIndicator.spacing ?? pitchBorderSpacing;
 
     return SizedBox(
-      width: thirtyYardsBoundary
-          .width, // Wider container to accommodate side labels
+      width: thirtyYardsBoundary.width, // Wider container to accommodate side labels
       height: thirtyYardsBoundary.height,
       child: Stack(
         clipBehavior: Clip.none,
@@ -115,11 +122,11 @@ class WagonWheelBoundaryWidgets {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Circle indicator (if enabled)
-                if (showCircle) ...[
+                if (circleIndicator.show) ...[
                   _buildBaseContainer(
-                    color: circleColor,
+                    color: circleIndicator.effectiveColor,
                     margin: const EdgeInsets.symmetric(vertical: 0),
-                    size: circleSize,
+                    size: circleIndicator.effectiveSize,
                     shape: BoxShape.circle,
                   ),
                   SizedBox(height: circleSpacing * 2),
@@ -129,36 +136,34 @@ class WagonWheelBoundaryWidgets {
                   size: pitchSize,
                   color: pitchColor,
                   borderRadius: BorderRadius.circular(4),
-                  border: pitchProperties.pitchBorder,
+                  border: pitchConfig.border,
                   alignment: Alignment.center,
                 ),
               ],
             ),
           ),
           // Build batsman widget if it should be below grid lines
-          if (pitchProperties.showBatsman &&
-              !pitchProperties.batsmanAboveGridLines)
+          if (batsman.show && !batsman.aboveGridLines)
             Center(
               child: WagonWheelBatsmanBuilder.buildBatsman(
                 pitchSize: pitchSize,
-                pitchProperties: pitchProperties,
+                batsmanProperties: batsman,
                 isLeftHanded: isLeftHanded,
               ),
             ),
           // LEG/OFF labels - positioned outside pitch on sides (only if enabled)
-          if (shouldShowLabels)
+          if (legOffLabel.show)
             Center(
-              child:
-                  WagonWheelLabelBuilder.buildLegOffLabels(
+              child: WagonWheelLabelBuilder.buildLegOffLabels(
                     pitchSize: pitchSize,
                     groundBoundarySize: groundBoundarySize,
-                    legText: pitchProperties.legLabelText,
-                    offText: pitchProperties.offLabelText,
-                    color: pitchProperties.legOffLabelColor,
-                    fontSize: pitchProperties.legOffLabelFontSize,
-                    fontWeight: pitchProperties.legOffLabelFontWeight,
+                    legText: legOffLabel.legText,
+                    offText: legOffLabel.offText,
+                    color: legOffLabel.color,
+                    fontSize: legOffLabel.fontSize,
+                    fontWeight: legOffLabel.fontWeight,
                     isLeftHanded: isLeftHanded,
-                    showLabels: shouldShowLabels,
+                    showLabels: legOffLabel.show,
                   ) ??
                   const SizedBox.shrink(),
             ),
@@ -223,8 +228,7 @@ class WagonWheelBoundaryWidgets {
       height: size?.height,
       margin: margin,
       decoration: BoxDecoration(
-        color:
-            color ??
+        color: color ??
             WagonWheelPackageConstants.defaultPrimaryColor.withValues(
               alpha: 0.2,
             ),
