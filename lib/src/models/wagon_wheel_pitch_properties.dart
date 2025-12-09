@@ -1,3 +1,4 @@
+import 'package:cricket_wagon_wheel/src/utils/package_constants.dart';
 import 'package:flutter/material.dart';
 
 /// Configuration for the pitch at the center of the wagon wheel
@@ -79,7 +80,7 @@ class WagonWheelPitchProperties {
   /// This allows complete customization of the pitch appearance
   /// Parameters: pitchSize, groundBoundarySize (for text sizing)
   final Widget Function(Size pitchSize, Size groundBoundarySize)?
-  customPitchBuilder;
+      customPitchBuilder;
 
   const WagonWheelPitchProperties({
     this.pitchSize,
@@ -90,7 +91,7 @@ class WagonWheelPitchProperties {
     this.pitchColor,
     this.pitchBorder,
     this.showBatsman = true,
-    this.batsmanIconPath,
+    this.batsmanIconPath = WagonWheelPackageConstants.defaultBatsmanIconPath,
     this.batsmanIconSize,
     this.batsmanIconColorFilter,
     this.showLegOffLabels = true,
