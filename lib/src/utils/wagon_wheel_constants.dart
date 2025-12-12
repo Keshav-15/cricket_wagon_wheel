@@ -1,18 +1,28 @@
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_sector_label.dart';
 import 'package:flutter/material.dart';
 
 /// Constants used throughout the wagon wheel implementation
 class WagonWheelConstants {
   // Label order for RIGHT-HANDED batsman (matching reference image)
   // Starting from top-left, going clockwise
-  static const List<String> labelsRightHanded = [
-    "Third Man", // Sector 0: Top-Left
-    "Deep Fine Leg", // Sector 1: Top-Right
-    "Deep Square Leg", // Sector 2: Mid-Right
-    "Deep Mid Wicket", // Sector 3: Bottom-Right
-    "Long On", // Sector 4: Bottom-Center-Right
-    "Long Off", // Sector 5: Bottom-Center-Left
-    "Deep Cover", // Sector 6: Bottom-Left
-    "Deep Point", // Sector 7: Mid-Left
+  static const List<WagonWheelSectorLabel> labelsRightHanded = [
+    WagonWheelSectorLabel(
+        id: 'third_man', name: 'Third Man'), // Sector 0: Top-Left
+    WagonWheelSectorLabel(
+        id: 'deep_fine_leg', name: 'Deep Fine Leg'), // Sector 1: Top-Right
+    WagonWheelSectorLabel(
+        id: 'deep_square_leg', name: 'Deep Square Leg'), // Sector 2: Mid-Right
+    WagonWheelSectorLabel(
+        id: 'deep_mid_wicket',
+        name: 'Deep Mid Wicket'), // Sector 3: Bottom-Right
+    WagonWheelSectorLabel(
+        id: 'long_on', name: 'Long On'), // Sector 4: Bottom-Center-Right
+    WagonWheelSectorLabel(
+        id: 'long_off', name: 'Long Off'), // Sector 5: Bottom-Center-Left
+    WagonWheelSectorLabel(
+        id: 'deep_cover', name: 'Deep Cover'), // Sector 6: Bottom-Left
+    WagonWheelSectorLabel(
+        id: 'deep_point', name: 'Deep Point'), // Sector 7: Mid-Left
   ];
 
   // For left-handed batsman, mirror horizontally (swap left/right sides)
@@ -43,7 +53,7 @@ class WagonWheelConstants {
       -3 * 3.141592653589793 / 4; // -3π/4
 
   /// Get labels for the specified batsman orientation
-  static List<String> getLabels(bool isLeftHanded) {
+  static List<WagonWheelSectorLabel> getLabels(bool isLeftHanded) {
     if (isLeftHanded) {
       return leftHandedMapping
           .map((index) => labelsRightHanded[index])

@@ -7,4 +7,7 @@ example/pubspec.lock
 # Developer documentation (not needed for package users)
 PUBLISHING_GUIDE.md
 BETA_TESTING_GUIDE.md
+CODEBASE_CHECKPOINT.md
+PRE_COMMIT_CHECKLIST.md
+PRE_PUBLISH_CHECKLIST.md
 
