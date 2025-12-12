@@ -31,8 +31,7 @@ class WagonWheelPitchRectangleProperties {
   /// Custom pitch widget builder. If provided, this will be used instead of default pitch UI
   /// This allows complete customization of the pitch appearance
   /// Parameters: pitchSize, groundBoundarySize (for text sizing)
-  final Widget Function(Size pitchSize, Size groundBoundarySize)?
-      customBuilder;
+  final Widget Function(Size pitchSize, Size groundBoundarySize)? customBuilder;
 
   const WagonWheelPitchRectangleProperties({
     this.size,
@@ -68,4 +67,3 @@ class WagonWheelPitchRectangleProperties {
     return pitchSize.height * spacingFactor;
   }
 }
-

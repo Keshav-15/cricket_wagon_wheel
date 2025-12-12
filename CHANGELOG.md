@@ -1,3 +1,19 @@
+## 1.0.0-beta.2
+
+- **Bottom Sheet for Shot Selection**: Added customizable bottom sheet with animated shimmer borders
+  - Pre-built shot options provider (`WagonWheelShotOptionsProvider`) with default shots for each sector
+  - Support for custom shot options, merging defaults with custom options
+  - Animated shimmer border effect on shot selection
+  - Fully customizable layout, styling, and behavior
+- **Enhanced Sector Labels**: Replaced `List<String>` with `WagonWheelSectorLabel` class
+  - Type-safe sector identification with `id` and `name` properties
+  - Improved `onMarkerPositionChanged` callback now includes sector label
+- **Code Quality Improvements**:
+  - Enhanced documentation across all public APIs
+  - Extracted magic numbers to named constants for better maintainability
+  - Improved code comments and algorithm explanations
+  - Zero lint errors and warnings
+
 ## 1.0.0-beta.1
 
 - Beta release of cricket_wagon_wheel package

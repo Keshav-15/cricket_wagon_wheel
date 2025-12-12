@@ -10,6 +10,7 @@ import 'package:cricket_wagon_wheel/src/models/wagon_wheel_label_config.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_marker_properties.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_pitch_properties.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_sector_config.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_sector_label.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_stadium_boundary_properties.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_text_properties.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_thirty_yards_boundary_properties.dart';
@@ -96,14 +97,18 @@ class WagonWheel extends StatefulWidget {
   /// Returns: A custom Widget that replaces the entire wagon wheel UI
   final Widget Function(
     BuildContext context,
-    void Function(double phi, double t)? onMarkerPositionChanged,
+    void Function(double phi, double t, WagonWheelSectorLabel label)?
+        onMarkerPositionChanged,
   )? customWidgetBuilder;
 
   /// Callback called when the marker position changes.
-  /// Provides the angle (phi) in radians and the normalized radius (t) from 0.0 to 1.0.
+  /// Provides the angle (phi) in radians, the normalized radius (t) from 0.0 to 1.0,
+  /// and the sector label for the current position.
   /// - phi: angle in radians (0 to 2π)
   /// - t: normalized distance from center (0.0 = center, 1.0 = border)
-  final void Function(double phi, double t)? onMarkerPositionChanged;
+  /// - label: the sector label for the current position
+  final void Function(double phi, double t, WagonWheelSectorLabel label)?
+      onMarkerPositionChanged;
 
   const WagonWheel({
     super.key,
@@ -141,15 +146,21 @@ class _WagonWheelState extends State<WagonWheel>
       WagonWheelConstants.defaultBaseStartAngle;
 
   /// Get effective labels, ensuring they match numberOfSectors
-  List<String> _getLabels(int numberOfSectors) {
+  List<WagonWheelSectorLabel> _getLabels(int numberOfSectors) {
     if (widget.label?.labels != null) {
       final providedLabels = widget.label!.labels!;
       // Ensure labels list matches numberOfSectors (trim or pad if needed)
       if (providedLabels.length < numberOfSectors) {
-        // Pad with empty strings if too few labels
+        // Pad with empty label objects if too few labels
         return [
           ...providedLabels,
-          ...List.filled(numberOfSectors - providedLabels.length, ''),
+          ...List.generate(
+            numberOfSectors - providedLabels.length,
+            (index) => WagonWheelSectorLabel(
+              id: 'empty_${providedLabels.length + index}',
+              name: '',
+            ),
+          ),
         ];
       } else if (providedLabels.length > numberOfSectors) {
         // Trim if too many labels
@@ -237,7 +248,11 @@ class _WagonWheelState extends State<WagonWheel>
       );
     }
 
-    getBorderWidth(BoxBorder? border) {
+    /// Extract border width from a BoxBorder.
+    ///
+    /// Returns the width of the top or bottom border, or 0.0 if no border exists.
+    /// Used for calculating boundary spacing to account for border thickness.
+    double getBorderWidth(BoxBorder? border) {
       final borderTop = border?.top;
       final borderBottom = border?.bottom;
       final borderSize = borderTop?.width ?? borderBottom?.width ?? 0.0;
@@ -267,10 +282,13 @@ class _WagonWheelState extends State<WagonWheel>
         final labels = _getLabels(numberOfSectors);
 
         // Ground Boundary - use MediaQuery to get screen width if groundSize not provided
+        // Default to 80% of screen width for responsive sizing
         final screenWidth = MediaQuery.of(context).size.width;
+        const double defaultGroundSizeFactor = 0.8;
         final groundProps =
             boundary.ground ?? const WagonWheelGroundBoundaryProperties();
-        double groundBoundary = groundProps.size ?? screenWidth * 0.8;
+        double groundBoundary =
+            groundProps.size ?? screenWidth * defaultGroundSizeFactor;
 
         // Circle must fit inside both → pick the smallest
         if (groundBoundary > availableWidth) {
@@ -292,6 +310,8 @@ class _WagonWheelState extends State<WagonWheel>
           stadiumBoundary = availableHeight;
         }
 
+        // Adjust ground boundary to account for stadium boundary size and borders
+        // Multiply border width by 2 to account for both sides (inner and outer)
         groundBoundary -= baseStadiumBoundary +
             (getBorderWidth(groundProps.border) * 2) +
             (getBorderWidth(stadiumProps.border) * 2);
@@ -308,10 +328,12 @@ class _WagonWheelState extends State<WagonWheel>
         );
 
         // Thirty Yards Boundary
+        // Default to 45% of ground boundary size (standard cricket field proportion)
+        const double defaultThirtyYardsFactor = 0.45;
         final thirtyYardsProps = boundary.thirtyYards ??
             const WagonWheelThirtyYardsBoundaryProperties();
         final thirtyYardsBoundary =
-            thirtyYardsProps.size ?? groundBoundary * 0.45;
+            thirtyYardsProps.size ?? groundBoundary * defaultThirtyYardsFactor;
         final calculatedThirtyYardsBoundary =
             WagonWheelSizeCalculator.calculateCapsuleCircleSize(
           size: thirtyYardsBoundary,
@@ -485,6 +507,14 @@ class _WagonWheelState extends State<WagonWheel>
           isInteractive: markerProperties.enableMarker,
           onDragEndPhiT: (phi, t) {
             final section = _detectSection(phi);
+            final numberOfSectors = _getNumberOfSectors();
+            final labels = _getLabels(numberOfSectors);
+            final label = section >= 0 && section < labels.length
+                ? labels[section]
+                : labels.isNotEmpty
+                    ? labels[0]
+                    : const WagonWheelSectorLabel(id: 'unknown', name: '');
+
             setState(() {
               _currentPhi = phi;
               _currentT = t;
@@ -493,7 +523,7 @@ class _WagonWheelState extends State<WagonWheel>
             splashController.forward(from: 0);
 
             // Notify user of marker position change
-            widget.onMarkerPositionChanged?.call(phi, t);
+            widget.onMarkerPositionChanged?.call(phi, t, label);
           },
         ),
       ),

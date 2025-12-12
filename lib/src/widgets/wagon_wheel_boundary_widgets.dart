@@ -95,23 +95,29 @@ class WagonWheelBoundaryWidgets {
     required bool isLeftHanded,
   }) {
     // Get categorized properties with defaults
-    final pitchConfig = pitchProperties.pitchConfig ?? const WagonWheelPitchRectangleProperties();
-    final circleIndicator = pitchProperties.circleIndicator ?? const WagonWheelCircleIndicatorProperties();
-    final batsman = pitchProperties.batsman ?? const WagonWheelBatsmanProperties();
-    final legOffLabel = pitchProperties.legOffLabel ?? const WagonWheelLegOffLabelProperties();
+    final pitchConfig = pitchProperties.pitchConfig ??
+        const WagonWheelPitchRectangleProperties();
+    final circleIndicator = pitchProperties.circleIndicator ??
+        const WagonWheelCircleIndicatorProperties();
+    final batsman =
+        pitchProperties.batsman ?? const WagonWheelBatsmanProperties();
+    final legOffLabel =
+        pitchProperties.legOffLabel ?? const WagonWheelLegOffLabelProperties();
 
     // If custom builder provided, use it
     if (pitchConfig.customBuilder != null) {
       return pitchConfig.customBuilder!(pitchSize, groundBoundarySize);
     }
 
-    final pitchColor = pitchConfig.color ?? const Color(0xFFD4A574); // Default beige/brown pitch color
+    final pitchColor = pitchConfig.color ??
+        const Color(0xFFD4A574); // Default beige/brown pitch color
 
     // Circle indicator spacing
     final circleSpacing = circleIndicator.spacing ?? pitchBorderSpacing;
 
     return SizedBox(
-      width: thirtyYardsBoundary.width, // Wider container to accommodate side labels
+      width: thirtyYardsBoundary
+          .width, // Wider container to accommodate side labels
       height: thirtyYardsBoundary.height,
       child: Stack(
         clipBehavior: Clip.none,

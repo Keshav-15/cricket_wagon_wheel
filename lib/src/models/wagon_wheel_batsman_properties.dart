@@ -39,4 +39,3 @@ class WagonWheelBatsmanProperties {
   String get effectiveIconPath =>
       iconPath ?? WagonWheelPackageConstants.defaultBatsmanIconPath;
 }
-

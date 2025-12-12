@@ -30,4 +30,3 @@ class WagonWheelCircleIndicatorProperties {
   /// Get effective size with default fallback
   Size get effectiveSize => size ?? const Size(8, 8);
 }
-

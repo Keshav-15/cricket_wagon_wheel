@@ -121,11 +121,51 @@ class _WagonWheelExampleState extends State<WagonWheelExample> {
                     markerLineColor: const Color(0xFFD32F2F), // Red
                     markerCircleColor: const Color(0xFFD32F2F), // Red
                   ),
-                  onMarkerPositionChanged: (phi, t) {
+                  onMarkerPositionChanged: (phi, t, label) {
                     setState(() {
                       lastPhi = phi;
                       lastT = t;
                     });
+
+                    // Get default shot options for this sector label
+                    final shotOptions =
+                        WagonWheelShotOptionsProvider.getShotOptionsForLabel(
+                          label,
+                        );
+
+                    // Validate that all shot options have unique IDs
+                    final duplicates =
+                        WagonWheelShotOptionsProvider.validateUniqueIds(
+                          shotOptions,
+                        );
+                    if (duplicates.isNotEmpty) {
+                      debugPrint(
+                        'Warning: Duplicate shot option IDs: $duplicates',
+                      );
+                    }
+
+                    WagonWheelBottomSheet.show(
+                      context: context,
+                      config: WagonWheelBottomSheetConfig(
+                        title: 'Select Shot Type (${label.name})',
+                        shotOptions: shotOptions,
+                        onShotSelected: (selectedOption) async {
+                          debugPrint(
+                            'Selected: ${selectedOption.name} (${selectedOption.id}) for sector: ${label.name} (${label.id})',
+                          );
+                        },
+                        onNoneSelected: () async {
+                          debugPrint('None selected for sector: ${label.name}');
+                        },
+                        borderConfig: WagonWheelBottomSheetBorderConfig(
+                          shimmerColors: [
+                            Colors.teal,
+                            Colors.green,
+                            Colors.teal,
+                          ],
+                        ),
+                      ),
+                    );
                   },
                 ),
                 const SizedBox(height: 20),

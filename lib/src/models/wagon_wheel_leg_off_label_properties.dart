@@ -29,4 +29,3 @@ class WagonWheelLegOffLabelProperties {
     this.fontWeight,
   });
 }
-

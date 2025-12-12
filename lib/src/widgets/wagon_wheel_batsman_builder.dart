@@ -26,9 +26,11 @@ class WagonWheelBatsmanBuilder {
 
     final batsmanIconPath = batsmanProperties.effectiveIconPath;
 
-    final defaultIconSize = pitchSize.width / 1.2;
-    final iconSizeWidth =
-        batsmanProperties.iconSize?.width ?? defaultIconSize;
+    // Default icon size is 83.3% of pitch width (1/1.2)
+    // This provides a good visual balance between icon and pitch size
+    const double iconSizeDivisor = 1.2;
+    final defaultIconSize = pitchSize.width / iconSizeDivisor;
+    final iconSizeWidth = batsmanProperties.iconSize?.width ?? defaultIconSize;
     final iconSizeHeight =
         batsmanProperties.iconSize?.height ?? defaultIconSize;
 
