@@ -2,12 +2,18 @@ import 'dart:math' as math;
 
 import 'package:cricket_wagon_wheel/src/draggable_marker.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_animation_properties.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_batsman_properties.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_boundary_line_properties.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_boundary_properties.dart';
-import 'package:cricket_wagon_wheel/src/models/wagon_wheel_config.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_ground_boundary_properties.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_label_config.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_marker_properties.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_pitch_properties.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_sector_config.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_sector_label.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_stadium_boundary_properties.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_text_properties.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_thirty_yards_boundary_properties.dart';
 import 'package:cricket_wagon_wheel/src/painters/wagon_wheel_partition_painter.dart';
 import 'package:cricket_wagon_wheel/src/utils/wagon_wheel_constants.dart';
 import 'package:cricket_wagon_wheel/src/utils/wagon_wheel_size_calculator.dart';
@@ -28,18 +34,18 @@ import 'package:flutter/material.dart';
 /// **Usage Example:**
 /// ```dart
 /// WagonWheel(
-///   config: WagonWheelConfig(
-///     boundary: WagonWheelBoundaryProperties(
-///       groundSize: 300,
-///       stadiumBoundarySize: 20,
-///     ),
+///   boundary: WagonWheelBoundaryProperties(
+///     stadium: WagonWheelStadiumBoundaryProperties(size: 20),
+///     ground: WagonWheelGroundBoundaryProperties(size: 300),
 ///     pitch: WagonWheelPitchProperties(
-///       showBatsman: true,
-///       showLegOffLabels: true,
+///       batsman: WagonWheelBatsmanProperties(show: true),
+///       legOffLabel: WagonWheelLegOffLabelProperties(show: true),
 ///     ),
-///     text: WagonWheelTextProperties(
-///       textColor: Colors.white,
-///     ),
+///   ),
+///   label: WagonWheelLabelConfig(
+///     properties: WagonWheelTextProperties(textColor: Colors.white),
+///   ),
+///   sector: WagonWheelSectorConfig(
 ///     boundaryLines: WagonWheelBoundaryLineProperties(
 ///       lineColor: Colors.white,
 ///       lineOpacity: 0.4,
@@ -53,23 +59,69 @@ import 'package:flutter/material.dart';
 /// ```
 ///
 /// **Customization:**
-/// - Use [WagonWheelConfig.customWidgetBuilder] for complete UI override
-/// - Use [WagonWheelPitchProperties.customPitchBuilder] for custom pitch UI
+/// - Use [customWidgetBuilder] for complete UI override
+/// - Use [WagonWheelPitchPropertiesConfig.customBuilder] for custom pitch UI
 /// - All visual properties are configurable through respective property classes
 class WagonWheel extends StatefulWidget {
-  /// Configuration for the wagon wheel
+  /// Configuration for boundaries (stadium, ground, thirty yards) and pitch
+  final WagonWheelBoundaryProperties? boundary;
+
+  /// Configuration for labels (text properties, custom labels, and positioning)
+  final WagonWheelLabelConfig? label;
+
+  /// Configuration for sector/partition settings (base start angle, number of sectors, boundary lines)
+  final WagonWheelSectorConfig? sector;
+
+  /// Configuration for animations and splash effects
+  final WagonWheelAnimationProperties? animation;
+
+  /// Configuration for the draggable marker
+  final WagonWheelMarkerProperties? marker;
+
+  /// List of static (non-draggable) markers to display
+  /// These markers will be rendered but cannot be moved by user interaction
+  /// Uses WagonWheelMarkerProperties with initialPhi and initialT set
+  final List<WagonWheelMarkerProperties>? staticMarkers;
+
+  /// Whether the batsman is left-handed (affects label mirroring)
+  final bool isLeftHanded;
+
+  /// Custom widget builder for complete wagon wheel customization.
+  /// If provided, this will be used instead of the default widget implementation.
+  /// This allows users to completely override the rendering logic.
   ///
-  /// Use WagonWheelConfig to organize all properties into logical groups.
-  /// If null, uses default configuration.
-  final WagonWheelConfig? config;
+  /// Parameters:
+  /// - [context] - BuildContext for the widget
+  /// - [onMarkerPositionChanged] - Callback for marker position changes
+  ///
+  /// Returns: A custom Widget that replaces the entire wagon wheel UI
+  final Widget Function(
+    BuildContext context,
+    void Function(double phi, double t, WagonWheelSectorLabel label)?
+        onMarkerPositionChanged,
+  )? customWidgetBuilder;
 
   /// Callback called when the marker position changes.
-  /// Provides the angle (phi) in radians and the normalized radius (t) from 0.0 to 1.0.
+  /// Provides the angle (phi) in radians, the normalized radius (t) from 0.0 to 1.0,
+  /// and the sector label for the current position.
   /// - phi: angle in radians (0 to 2π)
   /// - t: normalized distance from center (0.0 = center, 1.0 = border)
-  final void Function(double phi, double t)? onMarkerPositionChanged;
+  /// - label: the sector label for the current position
+  final void Function(double phi, double t, WagonWheelSectorLabel label)?
+      onMarkerPositionChanged;
 
-  const WagonWheel({super.key, this.config, this.onMarkerPositionChanged});
+  const WagonWheel({
+    super.key,
+    this.boundary,
+    this.label,
+    this.sector,
+    this.animation,
+    this.marker,
+    this.staticMarkers,
+    this.isLeftHanded = false,
+    this.customWidgetBuilder,
+    this.onMarkerPositionChanged,
+  });
 
   @override
   State<WagonWheel> createState() => _WagonWheelState();
@@ -84,28 +136,31 @@ class _WagonWheelState extends State<WagonWheel>
   double? _currentPhi;
   double? _currentT;
 
-  /// Get effective config, using provided config or creating default
-  WagonWheelConfig get _effectiveConfig =>
-      widget.config ?? const WagonWheelConfig();
+  /// Get effective number of sectors with default fallback
+  int _getNumberOfSectors() =>
+      widget.sector?.numberOfSectors ?? WagonWheelConstants.numberOfSectors;
 
-  /// Get effective number of sectors from config with default fallback
-  int _getNumberOfSectors(WagonWheelConfig config) =>
-      config.numberOfSectors ?? WagonWheelConstants.numberOfSectors;
+  /// Get effective base start angle with default fallback
+  double _getBaseStartAngle() =>
+      widget.sector?.baseStartAngle ??
+      WagonWheelConstants.defaultBaseStartAngle;
 
-  /// Get effective base start angle from config with default fallback
-  double _getBaseStartAngle(WagonWheelConfig config) =>
-      config.baseStartAngle ?? WagonWheelConstants.defaultBaseStartAngle;
-
-  /// Get effective labels from config, ensuring they match numberOfSectors
-  List<String> _getLabels(WagonWheelConfig config, int numberOfSectors) {
-    if (config.labels != null) {
-      final providedLabels = config.labels!;
+  /// Get effective labels, ensuring they match numberOfSectors
+  List<WagonWheelSectorLabel> _getLabels(int numberOfSectors) {
+    if (widget.label?.labels != null) {
+      final providedLabels = widget.label!.labels!;
       // Ensure labels list matches numberOfSectors (trim or pad if needed)
       if (providedLabels.length < numberOfSectors) {
-        // Pad with empty strings if too few labels
+        // Pad with empty label objects if too few labels
         return [
           ...providedLabels,
-          ...List.filled(numberOfSectors - providedLabels.length, ''),
+          ...List.generate(
+            numberOfSectors - providedLabels.length,
+            (index) => WagonWheelSectorLabel(
+              id: 'empty_${providedLabels.length + index}',
+              name: '',
+            ),
+          ),
         ];
       } else if (providedLabels.length > numberOfSectors) {
         // Trim if too many labels
@@ -113,7 +168,7 @@ class _WagonWheelState extends State<WagonWheel>
       }
       return providedLabels;
     }
-    return WagonWheelConstants.getLabels(config.isLeftHanded);
+    return WagonWheelConstants.getLabels(widget.isLeftHanded);
   }
 
   /// Normalize angle to [0, 2π) range
@@ -131,14 +186,12 @@ class _WagonWheelState extends State<WagonWheel>
   @override
   void initState() {
     super.initState();
-    final config = _effectiveConfig;
-    final animation = config.animation ?? const WagonWheelAnimationProperties();
-    final marker = config.marker ?? const WagonWheelMarkerProperties();
+    final animation = widget.animation ?? const WagonWheelAnimationProperties();
+    final marker = widget.marker ?? const WagonWheelMarkerProperties();
 
     splashController = AnimationController(
       vsync: this,
-      duration:
-          animation.splashAnimationDuration ??
+      duration: animation.splashAnimationDuration ??
           const Duration(milliseconds: 400),
     );
 
@@ -163,9 +216,8 @@ class _WagonWheelState extends State<WagonWheel>
   ///
   /// **Returns:** Sector index (0 to numberOfSectors-1) or -1 if invalid
   int _detectSection(double phi) {
-    final config = _effectiveConfig;
-    final baseStartAngle = _getBaseStartAngle(config);
-    final numberOfSectors = _getNumberOfSectors(config);
+    final baseStartAngle = _getBaseStartAngle();
+    final numberOfSectors = _getNumberOfSectors();
 
     // Normalize angle to [0, 2π)
     final normalizedPhi = _normalizeAngle(phi);
@@ -188,18 +240,19 @@ class _WagonWheelState extends State<WagonWheel>
 
   @override
   Widget build(BuildContext context) {
-    final config = _effectiveConfig;
-
     // Allow custom widget builder if provided (fallback for complete customization)
-    if (config.customWidgetBuilder != null) {
-      return config.customWidgetBuilder!(
+    if (widget.customWidgetBuilder != null) {
+      return widget.customWidgetBuilder!(
         context,
-        _effectiveConfig,
         widget.onMarkerPositionChanged,
       );
     }
 
-    getBorderWidth(BoxBorder? border) {
+    /// Extract border width from a BoxBorder.
+    ///
+    /// Returns the width of the top or bottom border, or 0.0 if no border exists.
+    /// Used for calculating boundary spacing to account for border thickness.
+    double getBorderWidth(BoxBorder? border) {
       final borderTop = border?.top;
       final borderBottom = border?.bottom;
       final borderSize = borderTop?.width ?? borderBottom?.width ?? 0.0;
@@ -213,22 +266,29 @@ class _WagonWheelState extends State<WagonWheel>
         final availableHeight = constraints.maxHeight;
 
         final boundary =
-            config.boundary ?? const WagonWheelBoundaryProperties();
-        final pitch = config.pitch ?? const WagonWheelPitchProperties();
-        final text = config.text ?? const WagonWheelTextProperties();
+            widget.boundary ?? const WagonWheelBoundaryProperties();
+        final pitch = boundary.pitch ?? const WagonWheelPitchProperties();
+        final labelConfig = widget.label ?? const WagonWheelLabelConfig();
+        final text = labelConfig.properties ?? const WagonWheelTextProperties();
         final animation =
-            config.animation ?? const WagonWheelAnimationProperties();
-        final marker = config.marker ?? const WagonWheelMarkerProperties();
-        final boundaryLines =
-            config.boundaryLines ?? const WagonWheelBoundaryLineProperties();
+            widget.animation ?? const WagonWheelAnimationProperties();
+        final marker = widget.marker ?? const WagonWheelMarkerProperties();
+        final sectorConfig = widget.sector ?? const WagonWheelSectorConfig();
+        final boundaryLines = sectorConfig.boundaryLines ??
+            const WagonWheelBoundaryLineProperties();
 
         // Get number of sectors and labels with defaults
-        final numberOfSectors = _getNumberOfSectors(config);
-        final labels = _getLabels(config, numberOfSectors);
+        final numberOfSectors = _getNumberOfSectors();
+        final labels = _getLabels(numberOfSectors);
 
         // Ground Boundary - use MediaQuery to get screen width if groundSize not provided
+        // Default to 80% of screen width for responsive sizing
         final screenWidth = MediaQuery.of(context).size.width;
-        double groundBoundary = boundary.groundSize ?? screenWidth * 0.8;
+        const double defaultGroundSizeFactor = 0.8;
+        final groundProps =
+            boundary.ground ?? const WagonWheelGroundBoundaryProperties();
+        double groundBoundary =
+            groundProps.size ?? screenWidth * defaultGroundSizeFactor;
 
         // Circle must fit inside both → pick the smallest
         if (groundBoundary > availableWidth) {
@@ -238,7 +298,9 @@ class _WagonWheelState extends State<WagonWheel>
         }
 
         // Stadium Boundary
-        final baseStadiumBoundary = boundary.stadiumBoundarySize;
+        final stadiumProps =
+            boundary.stadium ?? const WagonWheelStadiumBoundaryProperties();
+        final baseStadiumBoundary = stadiumProps.size;
         double stadiumBoundary = baseStadiumBoundary + groundBoundary;
 
         // Circle must fit inside both → pick the smallest
@@ -248,30 +310,35 @@ class _WagonWheelState extends State<WagonWheel>
           stadiumBoundary = availableHeight;
         }
 
-        groundBoundary -=
-            baseStadiumBoundary +
-            (getBorderWidth(boundary.groundBoundaryBorder) * 2) +
-            (getBorderWidth(boundary.stadiumBoundaryBorder) * 2);
+        // Adjust ground boundary to account for stadium boundary size and borders
+        // Multiply border width by 2 to account for both sides (inner and outer)
+        groundBoundary -= baseStadiumBoundary +
+            (getBorderWidth(groundProps.border) * 2) +
+            (getBorderWidth(stadiumProps.border) * 2);
 
         final calculatedStadiumBoundary =
             WagonWheelSizeCalculator.calculateOvalCircleSize(
-              oval: boundary.groundBoundaryOvalness,
-              size: stadiumBoundary,
-            );
+          oval: groundProps.ovalness,
+          size: stadiumBoundary,
+        );
         final calculatedGroundBoundary =
             WagonWheelSizeCalculator.calculateOvalCircleSize(
-              size: groundBoundary,
-              oval: boundary.groundBoundaryOvalness,
-            );
+          size: groundBoundary,
+          oval: groundProps.ovalness,
+        );
 
         // Thirty Yards Boundary
+        // Default to 45% of ground boundary size (standard cricket field proportion)
+        const double defaultThirtyYardsFactor = 0.45;
+        final thirtyYardsProps = boundary.thirtyYards ??
+            const WagonWheelThirtyYardsBoundaryProperties();
         final thirtyYardsBoundary =
-            boundary.thirtyYardsSize ?? groundBoundary * 0.45;
+            thirtyYardsProps.size ?? groundBoundary * defaultThirtyYardsFactor;
         final calculatedThirtyYardsBoundary =
             WagonWheelSizeCalculator.calculateCapsuleCircleSize(
-              size: thirtyYardsBoundary,
-              capsule: boundary.thirtyYardsBoundaryCapsulness,
-            );
+          size: thirtyYardsBoundary,
+          capsule: thirtyYardsProps.capsulness,
+        );
 
         // Build children list based on z-order preference
         final List<Widget> stackChildren = [
@@ -281,17 +348,15 @@ class _WagonWheelState extends State<WagonWheel>
             thirtyYardsBoundary: calculatedThirtyYardsBoundary,
             boundaryProperties: boundary,
             pitchProperties: pitch,
-            isLeftHanded: config.isLeftHanded,
+            isLeftHanded: widget.isLeftHanded,
           ),
         ];
 
         // Only show animations and highlighting if marker is enabled
-        final effectiveSelectedSection = marker.enableMarker
-            ? selectedSection
-            : -1;
-        final effectiveSplashAnimation = marker.enableMarker
-            ? splashController
-            : null;
+        final effectiveSelectedSection =
+            marker.enableMarker ? selectedSection : -1;
+        final effectiveSplashAnimation =
+            marker.enableMarker ? splashController : null;
 
         final labelsWidget = Center(
           child: CustomPaint(
@@ -299,13 +364,13 @@ class _WagonWheelState extends State<WagonWheel>
             painter: WagonWheelPartitionPainter(
               radiusX: calculatedGroundBoundary.width / 2,
               radiusY: calculatedGroundBoundary.height / 2,
-              isLeftHanded: config.isLeftHanded,
+              isLeftHanded: widget.isLeftHanded,
               highlightedSection: effectiveSelectedSection,
               splashAnimation: effectiveSplashAnimation,
               textProperties: text,
               animationProperties: animation,
               boundaryLineProperties: boundaryLines,
-              baseStartAngle: _getBaseStartAngle(config),
+              baseStartAngle: _getBaseStartAngle(),
               numberOfSectors: numberOfSectors,
               labels: labels,
             ),
@@ -319,9 +384,9 @@ class _WagonWheelState extends State<WagonWheel>
 
         // Build static markers widget if provided (reusing DraggableMarker)
         Widget? staticMarkersWidget;
-        if (config.staticMarkers != null && config.staticMarkers!.isNotEmpty) {
+        if (widget.staticMarkers != null && widget.staticMarkers!.isNotEmpty) {
           staticMarkersWidget = Stack(
-            children: config.staticMarkers!
+            children: widget.staticMarkers!
                 .where((marker) => marker.initialPhi != null)
                 .map(
                   (marker) => Center(
@@ -351,14 +416,17 @@ class _WagonWheelState extends State<WagonWheel>
         final thirtyYardsDiameter = calculatedThirtyYardsBoundary.height;
         final pitchSize = pitch.calculatePitchSize(thirtyYardsDiameter);
 
+        // Get batsman properties
+        final batsman = pitch.batsman ?? const WagonWheelBatsmanProperties();
+
         // Build batsman widget if it should be above grid lines
         Widget? standaloneBatsmanWidget;
-        if (pitch.batsmanAboveGridLines && pitch.showBatsman) {
+        if (batsman.aboveGridLines && batsman.show) {
           standaloneBatsmanWidget = Center(
             child: WagonWheelBatsmanBuilder.buildBatsman(
               pitchSize: pitchSize,
-              pitchProperties: pitch,
-              isLeftHanded: config.isLeftHanded,
+              batsmanProperties: batsman,
+              isLeftHanded: widget.isLeftHanded,
             )!,
           );
         }
@@ -366,9 +434,10 @@ class _WagonWheelState extends State<WagonWheel>
         // Build widget list based on z-order preferences
         // Z-order: labels -> static markers -> draggable marker -> batsman
         // Static markers render below draggable marker so draggable marker appears on top
-        if (pitch.batsmanAboveGridLines && standaloneBatsmanWidget != null) {
+        final labelsAboveMarker = labelConfig.labelsAboveMarker;
+        if (batsman.aboveGridLines && standaloneBatsmanWidget != null) {
           // Batsman above grid lines: boundary -> grid -> static markers -> draggable marker -> batsman
-          if (config.labelsAboveMarker) {
+          if (labelsAboveMarker) {
             stackChildren.add(IgnorePointer(child: labelsWidget));
             if (staticMarkersWidget != null) {
               stackChildren.add(staticMarkersWidget);
@@ -384,7 +453,7 @@ class _WagonWheelState extends State<WagonWheel>
           stackChildren.add(standaloneBatsmanWidget);
         } else {
           // Batsman inside pitch (below grid lines): normal order
-          if (config.labelsAboveMarker) {
+          if (labelsAboveMarker) {
             stackChildren.add(IgnorePointer(child: labelsWidget));
             if (staticMarkersWidget != null) {
               stackChildren.add(staticMarkersWidget);
@@ -438,6 +507,14 @@ class _WagonWheelState extends State<WagonWheel>
           isInteractive: markerProperties.enableMarker,
           onDragEndPhiT: (phi, t) {
             final section = _detectSection(phi);
+            final numberOfSectors = _getNumberOfSectors();
+            final labels = _getLabels(numberOfSectors);
+            final label = section >= 0 && section < labels.length
+                ? labels[section]
+                : labels.isNotEmpty
+                    ? labels[0]
+                    : const WagonWheelSectorLabel(id: 'unknown', name: '');
+
             setState(() {
               _currentPhi = phi;
               _currentT = t;
@@ -446,9 +523,7 @@ class _WagonWheelState extends State<WagonWheel>
             splashController.forward(from: 0);
 
             // Notify user of marker position change
-            if (widget.onMarkerPositionChanged != null) {
-              widget.onMarkerPositionChanged!(phi, t);
-            }
+            widget.onMarkerPositionChanged?.call(phi, t, label);
           },
         ),
       ),

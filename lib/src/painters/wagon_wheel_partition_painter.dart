@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_animation_properties.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_boundary_line_properties.dart';
+import 'package:cricket_wagon_wheel/src/models/wagon_wheel_sector_label.dart';
 import 'package:cricket_wagon_wheel/src/models/wagon_wheel_text_properties.dart';
 import 'package:cricket_wagon_wheel/src/utils/wagon_wheel_constants.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +20,7 @@ class WagonWheelPartitionPainter extends CustomPainter {
   final WagonWheelBoundaryLineProperties? boundaryLineProperties;
   final double baseStartAngle;
   final int numberOfSectors;
-  final List<String> labels;
+  final List<WagonWheelSectorLabel> labels;
 
   WagonWheelPartitionPainter({
     required this.radiusX,
@@ -50,7 +51,7 @@ class WagonWheelPartitionPainter extends CustomPainter {
       }
 
       _drawWedgeLines(canvas, center, start, end);
-      _drawLabel(canvas, center, start, end, labels[i], i);
+      _drawLabel(canvas, center, start, end, labels[i].name, i);
 
       if (highlightedSection == i) {
         _drawSplash(canvas, center, start, end);
@@ -102,11 +103,9 @@ class WagonWheelPartitionPainter extends CustomPainter {
     final midAngle = (start + end) / 2;
 
     // Position for label center (configurable)
-    final minRadiusFactor =
-        textProperties.textMinRadiusFactor ??
+    final minRadiusFactor = textProperties.textMinRadiusFactor ??
         WagonWheelConstants.defaultTextMinRadiusFactor;
-    final maxRadiusFactor =
-        textProperties.textRadiusFactor ??
+    final maxRadiusFactor = textProperties.textRadiusFactor ??
         WagonWheelConstants.defaultTextRadiusFactor;
 
     // Ensure min is less than max, and clamp to valid range
@@ -123,31 +122,31 @@ class WagonWheelPartitionPainter extends CustomPainter {
     final cy = center.dy + textRadiusY * math.sin(midAngle);
     final labelCenter = Offset(cx, cy);
 
-    // Simple size-based font sizing - determine base font based on circle size
+    // Calculate base font size based on average radius
+    // Formula: fontSize = averageRadius / fontSizeDivisor
+    // The divisor (11) provides a reasonable default scaling factor
     final averageRadius = (radiusX + radiusY) / 2;
-    double baseFontSize = averageRadius / 11;
+    const double fontSizeDivisor = 11.0;
+    double baseFontSize = averageRadius / fontSizeDivisor;
 
     // Override with configurable value if provided
     baseFontSize = textProperties.baseFontSize ?? baseFontSize;
 
-    // Split label into words for line breaking
+    // Split label into words for multi-line rendering
+    // Each word becomes a separate line to prevent word breaking
     final words = label.split(' ');
 
-    // Simple line breaking logic - only break between words, never within words
+    // Simple line breaking: one word per line
+    // This ensures labels like "Deep Mid Wicket" render as:
+    //   Deep
+    //   Mid
+    //   Wicket
+    // Instead of breaking words mid-character
     final lines = <String>[];
-
-    if (words.length == 1) {
-      lines.add(label);
-    } else if (words.length == 2) {
-      lines.add(words[0]);
-      lines.add(words[1]);
-    } else if (words.length == 3) {
-      lines.add(words[0]);
-      lines.add(words[1]);
-      lines.add(words[2]);
-    } else {
-      lines.addAll(words);
+    if (words.isEmpty) {
+      return; // Skip rendering empty labels
     }
+    lines.addAll(words);
 
     // Render each line separately at base font size - prevents any word breaking
     double totalHeight = 0;
@@ -203,8 +202,7 @@ class WagonWheelPartitionPainter extends CustomPainter {
     return TextStyle(
       fontSize: fontSize,
       color: textProperties.textColor ?? WagonWheelConstants.defaultTextColor,
-      fontWeight:
-          textProperties.textFontWeight ??
+      fontWeight: textProperties.textFontWeight ??
           WagonWheelConstants.defaultTextFontWeight,
     );
   }
@@ -219,11 +217,9 @@ class WagonWheelPartitionPainter extends CustomPainter {
     double start,
     double end,
   ) {
-    final bgColor =
-        animationProperties.selectedSectorBackgroundColor ??
+    final bgColor = animationProperties.selectedSectorBackgroundColor ??
         WagonWheelConstants.defaultSelectedSectorBackgroundColor;
-    final bgOpacity =
-        animationProperties.selectedSectorBackgroundOpacity ??
+    final bgOpacity = animationProperties.selectedSectorBackgroundOpacity ??
         WagonWheelConstants.defaultSelectedSectorBackgroundOpacity;
 
     final paint = Paint()
@@ -235,7 +231,9 @@ class WagonWheelPartitionPainter extends CustomPainter {
     path.moveTo(center.dx, center.dy);
 
     // Draw arc along the sector edge
-    for (double a = start; a <= end; a += 0.02) {
+    // Use small angle increment (0.02 radians ≈ 1.15 degrees) for smooth curve
+    const double angleIncrement = 0.02;
+    for (double a = start; a <= end; a += angleIncrement) {
       final x = center.dx + radiusX * math.cos(a);
       final y = center.dy + radiusY * math.sin(a);
       path.lineTo(x, y);
@@ -252,19 +250,15 @@ class WagonWheelPartitionPainter extends CustomPainter {
   void _drawSplash(Canvas canvas, Offset center, double start, double end) {
     if (splashAnimation == null) return;
 
-    final curve =
-        animationProperties.splashAnimationCurve ??
+    final curve = animationProperties.splashAnimationCurve ??
         WagonWheelConstants.defaultSplashAnimationCurve;
     final animatedProgress = curve.transform(splashAnimation!.value);
 
-    final splashCol =
-        animationProperties.splashColor ??
+    final splashCol = animationProperties.splashColor ??
         WagonWheelConstants.defaultSplashColor;
-    final maxRadiusFactor =
-        animationProperties.splashMaxRadius ??
+    final maxRadiusFactor = animationProperties.splashMaxRadius ??
         WagonWheelConstants.defaultSplashMaxRadius;
-    final maxOpacity =
-        animationProperties.splashOpacity ??
+    final maxOpacity = animationProperties.splashOpacity ??
         WagonWheelConstants.defaultSplashOpacity;
 
     // Material-like ripple: Fill entire sector with expanding/fading effect
@@ -280,7 +274,9 @@ class WagonWheelPartitionPainter extends CustomPainter {
     path.moveTo(center.dx, center.dy);
 
     // Draw arc from center to sector edge, expanding with animation progress
-    for (double a = start; a <= end; a += 0.02) {
+    // Use small angle increment for smooth curve rendering
+    const double angleIncrement = 0.02;
+    for (double a = start; a <= end; a += angleIncrement) {
       final x = center.dx + (radiusX * currentRadiusFactor) * math.cos(a);
       final y = center.dy + (radiusY * currentRadiusFactor) * math.sin(a);
       path.lineTo(x, y);

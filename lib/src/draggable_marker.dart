@@ -68,8 +68,12 @@ class DraggableMarker extends StatefulWidget {
 }
 
 class _DraggableMarkerState extends State<DraggableMarker> {
-  double? phi; // angle
-  double t = 1; // radius factor
+  /// Current angle (phi) in radians, or null if marker is not visible
+  double? phi;
+
+  /// Normalized radius factor (t) from 0.0 to 1.0
+  /// 0.0 = center, 1.0 = border edge
+  double t = 1;
 
   @override
   void initState() {
@@ -84,27 +88,45 @@ class _DraggableMarkerState extends State<DraggableMarker> {
     // If initialPhi is null, phi remains null and marker won't render
   }
 
-  /// Convert pixel drag point -> normalized (phi, t)
+  /// Convert pixel drag point to normalized polar coordinates (phi, t).
+  ///
+  /// **Algorithm:**
+  /// 1. Calculate angle (phi) using atan2 for ellipse-aware angle conversion
+  /// 2. Find the boundary point on the ellipse at the same angle
+  /// 3. Compute normalized radius (t) by comparing drag point to boundary point
+  /// 4. Handle edge cases (division by zero, NaN values)
+  ///
+  /// **Parameters:**
+  /// - [p] - Drag point in local coordinates (relative to center)
+  /// - [clampToBorder] - If true, forces t to 1.0 (border edge)
   void _setFromPoint(Offset p, {bool clampToBorder = false}) {
     final x = p.dx;
     final y = p.dy;
 
-    // robust ellipse angle conversion
+    // Calculate angle using ellipse-aware conversion
+    // Uses atan2(a*y, b*x) instead of atan2(y, x) to account for ellipse shape
     phi = atan2(widget.a * y, widget.b * x);
 
-    // ellipse boundary point at same phi
+    // Calculate the boundary point on the ellipse at the same angle
+    // This gives us the reference point for normalizing the radius
     final bx = widget.a * cos(phi!);
     final by = widget.b * sin(phi!);
 
+    // Compute normalized radius (t) by comparing drag point to boundary
+    // Use the larger component to avoid division by zero issues
     double computedT;
     if (bx.abs() > by.abs() && bx.abs() > 1e-9) {
+      // Use x-component when it's dominant
       computedT = x / bx;
     } else if (by.abs() > 1e-9) {
+      // Use y-component when it's dominant
       computedT = y / by;
     } else {
+      // Edge case: both components near zero (at center)
       computedT = 0.0;
     }
 
+    // Clamp to valid range [0.0, 1.0] and handle NaN
     t = computedT.isNaN ? 0.0 : computedT.clamp(0.0, 1.0);
     if (clampToBorder) t = 1.0;
   }

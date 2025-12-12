@@ -34,18 +34,15 @@ flutter pub get
 import 'package:cricket_wagon_wheel/cricket_wagon_wheel.dart';
 
 WagonWheel(
-  config: WagonWheelConfig(
-    boundary: WagonWheelBoundaryProperties(
-      groundSize: 300,
-      stadiumBoundarySize: 20,
-    ),
-    pitch: WagonWheelPitchProperties(
-      showBatsman: true,
-      showLegOffLabels: true,
-    ),
+  boundary: WagonWheelBoundaryProperties(
+    ground: WagonWheelGroundBoundaryProperties(size: 300),
+    stadium: WagonWheelStadiumBoundaryProperties(size: 20),
   ),
-  onMarkerPositionChanged: (phi, t) {
-    print('Marker position: phi=$phi, t=$t');
+  pitch: WagonWheelPitchProperties(
+    batsman: WagonWheelBatsmanProperties(show: true),
+  ),
+  onMarkerPositionChanged: (phi, t, label) {
+    print('Marker position: phi=$phi, t=$t, sector: ${label.name}');
   },
 )
 ```
@@ -62,14 +59,39 @@ WagonWheel()  // Uses all default configurations
 
 ```dart
 WagonWheel(
-  config: WagonWheelConfig(
-    marker: WagonWheelMarkerProperties(
-      initialPhi: 0.92,  // Angle in radians
-      initialT: 0.6,     // 60% from center
-    ),
+  marker: WagonWheelMarkerProperties(
+    enableMarker: true,
+    initialPhi: 0.92,  // Angle in radians
+    initialT: 0.6,     // 60% from center
   ),
-  onMarkerPositionChanged: (phi, t) {
-    print('Marker moved: phi=$phi, t=$t');
+  onMarkerPositionChanged: (phi, t, label) {
+    print('Marker moved: phi=$phi, t=$t, sector: ${label.name}');
+  },
+)
+```
+
+### With Bottom Sheet for Shot Selection
+
+The package includes a built-in bottom sheet for shot selection with pre-configured shot options for each sector:
+
+```dart
+WagonWheel(
+  marker: WagonWheelMarkerProperties(enableMarker: true),
+  onMarkerPositionChanged: (phi, t, label) {
+    // Get default shot options for this sector
+    final shotOptions = WagonWheelShotOptionsProvider.getShotOptionsForLabel(label);
+    
+    WagonWheelBottomSheet.show(
+      context: context,
+      config: WagonWheelBottomSheetConfig(
+        title: 'Select Shot Type (${label.name})',
+        shotOptions: shotOptions,
+        onShotSelected: (selectedOption) async {
+          print('Selected: ${selectedOption.name} (${selectedOption.id})');
+          // Handle shot selection
+        },
+      ),
+    );
   },
 )
 ```
@@ -78,120 +100,201 @@ WagonWheel(
 
 ```dart
 WagonWheel(
-  config: WagonWheelConfig(
-    isLeftHanded: false,
-    boundary: WagonWheelBoundaryProperties(
-      groundSize: 300,
-      groundBoundaryOvalness: 0.1,
-      stadiumBoundarySize: 20,
-      stadiumBoundaryColor: Colors.green,
-      groundBoundaryColor: Colors.amber,
-      groundBoundaryBorder: Border.all(color: Colors.white, width: 2),
-      stadiumBoundaryBorder: Border.all(color: Colors.black, width: 3),
-      thirtyYardsBoundaryColor: Colors.blue,
-      thirtyYardsBoundaryBorder: Border.all(color: Colors.white),
+  isLeftHanded: false,
+  boundary: WagonWheelBoundaryProperties(
+    ground: WagonWheelGroundBoundaryProperties(
+      size: 300,
+      ovalness: 0.1,
+      color: Colors.amber,
+      border: Border.all(color: Colors.white, width: 2),
     ),
-    pitch: WagonWheelPitchProperties(
-      pitchColor: Colors.brown,
-      pitchBorder: Border.all(color: Colors.black, width: 2),
-      showBatsman: true,
-      batsmanIconPath: 'assets/icons/ic_batsman.svg',  // Your custom icon
-      showLegOffLabels: true,
-      legLabelText: 'LEG',
-      offLabelText: 'OFF',
-      showCircleIndicator: true,
-      circleIndicatorColor: Colors.green,
+    stadium: WagonWheelStadiumBoundaryProperties(
+      size: 20,
+      color: Colors.green,
+      border: Border.all(color: Colors.black, width: 3),
     ),
-    text: WagonWheelTextProperties(
+    thirtyYards: WagonWheelThirtyYardsBoundaryProperties(
+      color: Colors.blue,
+      border: Border.all(color: Colors.white),
+    ),
+  ),
+  pitch: WagonWheelPitchProperties(
+    pitchConfig: WagonWheelPitchRectangleProperties(
+      color: Colors.brown,
+      border: Border.all(color: Colors.black, width: 2),
+    ),
+    batsman: WagonWheelBatsmanProperties(
+      show: true,
+      iconPath: 'assets/icons/ic_batsman.svg',
+    ),
+    legOffLabel: WagonWheelLegOffLabelProperties(
+      show: true,
+      legText: 'LEG',
+      offText: 'OFF',
+    ),
+    circleIndicator: WagonWheelCircleIndicatorProperties(
+      show: true,
+      color: Colors.green,
+    ),
+  ),
+  label: WagonWheelLabelConfig(
+    properties: WagonWheelTextProperties(
       textColor: Colors.white,
       baseFontSize: 14,
       textFontWeight: FontWeight.bold,
     ),
+  ),
+  sector: WagonWheelSectorConfig(
     boundaryLines: WagonWheelBoundaryLineProperties(
       lineColor: Colors.white,
       lineOpacity: 0.4,
       lineWidth: 1.5,
     ),
-    marker: WagonWheelMarkerProperties(
-      initialPhi: 0.5,
-      initialT: 0.8,
-      markerLineColor: Colors.red,
-      markerCircleColor: Colors.red,
-      markerCircleSize: 6.0,
-      enableMarker: true,
-      lockToBorder: false,
-    ),
-    staticMarkers: [
-      WagonWheelMarkerProperties(
-        initialPhi: 0.3,
-        initialT: 0.7,
-        markerLineColor: Colors.blue,
-        markerCircleColor: Colors.blue,
-      ),
-      WagonWheelMarkerProperties(
-        initialPhi: 1.2,
-        initialT: 0.6,
-        markerLineColor: Colors.orange,
-        markerCircleColor: Colors.orange,
-      ),
-    ],
-    animation: WagonWheelAnimationProperties(
-      splashColor: Colors.white,
-      splashOpacity: 0.3,
-      selectedSectorBackgroundColor: Colors.white,
-      selectedSectorBackgroundOpacity: 0.15,
-    ),
   ),
-  onMarkerPositionChanged: (phi, t) {
+  marker: WagonWheelMarkerProperties(
+    enableMarker: true,
+    initialPhi: 0.5,
+    initialT: 0.8,
+    markerLineColor: Colors.red,
+    markerCircleColor: Colors.red,
+    markerCircleSize: 6.0,
+    lockToBorder: false,
+  ),
+  staticMarkers: [
+    WagonWheelMarkerProperties(
+      initialPhi: 0.3,
+      initialT: 0.7,
+      markerLineColor: Colors.blue,
+      markerCircleColor: Colors.blue,
+    ),
+    WagonWheelMarkerProperties(
+      initialPhi: 1.2,
+      initialT: 0.6,
+      markerLineColor: Colors.orange,
+      markerCircleColor: Colors.orange,
+    ),
+  ],
+  animation: WagonWheelAnimationProperties(
+    splashColor: Colors.white,
+    splashOpacity: 0.3,
+    selectedSectorBackgroundColor: Colors.white,
+    selectedSectorBackgroundOpacity: 0.15,
+  ),
+  onMarkerPositionChanged: (phi, t, label) {
     // Handle marker position changes
+    print('Sector: ${label.name} (${label.id})');
   },
 )
 ```
 
+## Shot Options Provider
+
+The package includes `WagonWheelShotOptionsProvider` which provides pre-built shot options for each sector label. This makes it easy to show relevant shot options based on the selected sector.
+
+### Using Default Shot Options
+
+```dart
+// Get default shot options for a sector label
+final shotOptions = WagonWheelShotOptionsProvider.getShotOptionsForLabel(label);
+
+WagonWheelBottomSheet.show(
+  context: context,
+  config: WagonWheelBottomSheetConfig(
+    shotOptions: shotOptions,
+    onShotSelected: (option) async {
+      // Handle selection
+    },
+  ),
+);
+```
+
+### Overriding with Custom Options
+
+```dart
+// Completely replace defaults with custom options
+final customOptions = [
+  WagonWheelShotOption(id: 'custom1', name: 'Custom Shot 1'),
+  WagonWheelShotOption(id: 'custom2', name: 'Custom Shot 2'),
+];
+
+final shotOptions = WagonWheelShotOptionsProvider.getShotOptionsForLabel(
+  label,
+  customOptions: customOptions,
+);
+```
+
+### Merging Defaults with Custom Options
+
+```dart
+// Append custom options to defaults
+final merged = WagonWheelShotOptionsProvider.mergeShotOptions(
+  label,
+  customOptions: [
+    WagonWheelShotOption(id: 'extra', name: 'Extra Shot'),
+  ],
+);
+
+// Or replace defaults when IDs match
+final merged = WagonWheelShotOptionsProvider.mergeShotOptions(
+  label,
+  customOptions: [
+    WagonWheelShotOption(id: 'defence', name: 'Custom Defence'),
+  ],
+  preferCustom: true, // Replace default 'defence' with custom
+);
+```
+
+### Validating Shot Options
+
+```dart
+final shotOptions = WagonWheelShotOptionsProvider.getShotOptionsForLabel(label);
+
+// Check for duplicate IDs
+final duplicates = WagonWheelShotOptionsProvider.validateUniqueIds(shotOptions);
+if (duplicates.isNotEmpty) {
+  print('Warning: Duplicate IDs found: $duplicates');
+}
+```
+
 ## Configuration
 
-All configuration is done through `WagonWheelConfig`, which organizes properties into logical groups:
+All configuration is done through properties directly on the `WagonWheel` widget, organized into logical groups:
 
 ### Boundary Properties
 
-Configure the three circular boundaries:
+Configure the three circular boundaries using `WagonWheelBoundaryProperties`:
 
-- `stadiumBoundarySize` - Size of the outermost stadium boundary
-- `groundSize` - Size of the ground boundary (defaults to 80% of screen width if not provided)
-- `groundBoundaryOvalness` - Oval shape factor (0.0 = circle, 1.0 = highly elliptical)
-- `thirtyYardsSize` - Size of the thirty yards boundary
-- Colors and borders for each boundary are individually configurable
+- `stadium` - `WagonWheelStadiumBoundaryProperties` - Outermost stadium boundary
+- `ground` - `WagonWheelGroundBoundaryProperties` - Ground boundary (defaults to 80% of screen width)
+- `thirtyYards` - `WagonWheelThirtyYardsBoundaryProperties` - Thirty yards boundary
+- `pitch` - `WagonWheelPitchProperties` - Central pitch area
+
+Each boundary has configurable size, color, border, and shape properties.
 
 ### Pitch Properties
 
-Customize the central pitch area:
+Customize the central pitch area using `WagonWheelPitchProperties`:
 
-- `pitchColor` - Color of the pitch rectangle
-- `pitchBorder` - Border styling
-- `showBatsman` - Show/hide batsman icon
-- `batsmanIconPath` - Path to your custom SVG icon
-- `showLegOffLabels` - Show/hide LEG/OFF labels
-- `showCircleIndicator` - Show/hide the circle indicator above pitch
-- `batsmanAboveGridLines` - Render batsman above or below sector lines
-- `customPitchBuilder` - Complete custom pitch UI builder
+- `pitchConfig` - `WagonWheelPitchRectangleProperties` - Pitch rectangle styling
+- `batsman` - `WagonWheelBatsmanProperties` - Batsman icon configuration
+- `legOffLabel` - `WagonWheelLegOffLabelProperties` - LEG/OFF label configuration
+- `circleIndicator` - `WagonWheelCircleIndicatorProperties` - Circle indicator configuration
 
-### Text Properties
+### Label Properties
 
-Configure label appearance:
+Configure label appearance using `WagonWheelLabelConfig`:
 
-- `textColor` - Color of sector labels
-- `baseFontSize` - Base font size for labels
-- `textFontWeight` - Font weight
-- `textRadiusFactor` - Distance from center (0.0 to 1.0)
-- `lineSpacingFactor` - Spacing between multi-line labels
+- `properties` - `WagonWheelTextProperties` - Text styling (color, font size, weight, etc.)
+- `labels` - `List<WagonWheelSectorLabel>?` - Custom sector labels (optional)
+- `labelsAboveMarker` - Whether labels render above the marker
 
 ### Marker Properties
 
-Configure the draggable marker:
+Configure the draggable marker using `WagonWheelMarkerProperties`:
 
+- `enableMarker` - Enable/disable marker functionality
 - `initialPhi` - Initial angle in radians (null = hidden)
 - `initialT` - Initial radius (0.0 = center, 1.0 = border)
-- `enableMarker` - Enable/disable marker functionality
 - `lockToBorder` - Lock marker to border edge
 - `markerLineColor`, `markerLineWidth` - Line styling
 - `markerCircleColor`, `markerCircleSize` - Circle styling
@@ -206,18 +309,103 @@ staticMarkers: [
     initialPhi: 0.5,
     initialT: 0.8,
     markerLineColor: Colors.red,
+    markerCircleColor: Colors.red,
   ),
 ]
 ```
 
-### Boundary Line Properties
+### Sector Configuration
 
-Configure the sector divider lines:
+Configure sectors using `WagonWheelSectorConfig`:
 
-- `lineColor` - Line color
-- `lineOpacity` - Line opacity (0.0 to 1.0)
-- `lineWidth` - Line width
-- `strokeCap` - Stroke cap style
+- `numberOfSectors` - Number of sectors (default: 8)
+- `baseStartAngle` - Starting angle for first sector (default: -3π/4)
+- `boundaryLines` - `WagonWheelBoundaryLineProperties` - Sector divider line styling
+  - `lineColor` - Line color
+  - `lineOpacity` - Line opacity (0.0 to 1.0)
+  - `lineWidth` - Line width
+  - `strokeCap` - Stroke cap style
+
+## Bottom Sheet for Shot Selection
+
+The package includes a customizable bottom sheet for shot selection with animated shimmer borders.
+
+### Basic Bottom Sheet Usage
+
+```dart
+WagonWheelBottomSheet.show(
+  context: context,
+  config: WagonWheelBottomSheetConfig(
+    title: 'Select Shot Type',
+    shotOptions: [
+      WagonWheelShotOption(id: 'flick', name: 'Flick'),
+      WagonWheelShotOption(id: 'pull', name: 'Pull'),
+      // ... more options
+    ],
+    onShotSelected: (selectedOption) async {
+      print('Selected: ${selectedOption.name}');
+      // Modal closes automatically after callback completes
+    },
+  ),
+);
+```
+
+### Using with Shot Options Provider
+
+```dart
+WagonWheel(
+  marker: WagonWheelMarkerProperties(enableMarker: true),
+  onMarkerPositionChanged: (phi, t, label) {
+    // Get default shot options for this sector
+    final shotOptions = WagonWheelShotOptionsProvider.getShotOptionsForLabel(label);
+    
+    WagonWheelBottomSheet.show(
+      context: context,
+      config: WagonWheelBottomSheetConfig(
+        title: 'Select Shot Type (${label.name})',
+        shotOptions: shotOptions,
+        onShotSelected: (option) async {
+          // Handle selection - modal closes automatically
+        },
+      ),
+    );
+  },
+)
+```
+
+### Customizing Bottom Sheet
+
+The bottom sheet is highly customizable:
+
+```dart
+WagonWheelBottomSheet.show(
+  context: context,
+  config: WagonWheelBottomSheetConfig(
+    title: 'Custom Title',
+    shotOptions: shotOptions,
+    isDismissible: true, // Allow tap outside to dismiss
+    showNoneOption: true, // Show "None Of The Above" button
+    layoutConfig: WagonWheelBottomSheetLayoutConfig(
+      crossAxisCount: 3, // 3 columns instead of 2
+      initialChildSize: 0.5, // Start at 50% height
+    ),
+    cardConfig: WagonWheelBottomSheetCardConfig(
+      layoutDirection: WagonWheelCardLayoutDirection.vertical, // Image above text
+    ),
+    borderConfig: WagonWheelBottomSheetBorderConfig(
+      shimmerColors: [Colors.blue, Colors.purple, Colors.blue],
+      animationDuration: Duration(milliseconds: 800),
+    ),
+    imageConfig: WagonWheelBottomSheetImageConfig(
+      width: 50,
+      height: 50,
+    ),
+    textConfig: WagonWheelBottomSheetTextConfig(
+      titleStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    ),
+  ),
+);
+```
 
 ## Advanced Customization
 
@@ -226,23 +414,57 @@ Configure the sector divider lines:
 Completely override the widget tree:
 
 ```dart
-WagonWheelConfig(
-  customWidgetBuilder: (context, config, onMarkerPositionChanged) {
+WagonWheel(
+  customWidgetBuilder: (context, onMarkerPositionChanged) {
     // Your completely custom implementation
     return YourCustomWidget(...);
   },
 )
 ```
 
-### Custom Pitch Builder
+## Sector Labels
 
-Override just the pitch area:
+The package uses `WagonWheelSectorLabel` objects with `id` and `name` properties for better type safety and easier comparisons.
+
+### Default Labels
+
+Default labels are provided via `WagonWheelConstants.getLabels()`:
 
 ```dart
-WagonWheelPitchProperties(
-  customPitchBuilder: (pitchSize, groundBoundarySize) {
-    // Your custom pitch UI
-    return YourCustomPitch(...);
+final labels = WagonWheelConstants.getLabels(isLeftHanded: false);
+// Returns: [Third Man, Deep Fine Leg, Deep Square Leg, ...]
+```
+
+### Custom Labels
+
+Provide custom labels:
+
+```dart
+WagonWheel(
+  label: WagonWheelLabelConfig(
+    labels: [
+      WagonWheelSectorLabel(id: 'custom_1', name: 'Custom Sector 1'),
+      WagonWheelSectorLabel(id: 'custom_2', name: 'Custom Sector 2'),
+      // ...
+    ],
+  ),
+)
+```
+
+### Using Labels in Callbacks
+
+The `onMarkerPositionChanged` callback provides the sector label:
+
+```dart
+WagonWheel(
+  onMarkerPositionChanged: (phi, t, label) {
+    // Use label.id for comparisons
+    if (label.id == 'deep_mid_wicket') {
+      // Handle specific sector
+    }
+    
+    // Use label.name for display
+    print('Current sector: ${label.name}');
   },
 )
 ```
@@ -253,13 +475,7 @@ The package includes a default batsman icon that you can use, or you can provide
 
 ### Using the Package-Provided Icon
 
-The package includes a default batsman icon. Simply reference it using the package asset path:
-
-```dart
-WagonWheelPitchProperties(
-  batsmanIconPath: 'packages/cricket_wagon_wheel/assets/icons/ic_batsman.svg',
-)
-```
+The package includes a default batsman icon. It's used automatically if no custom path is provided.
 
 ### Using Your Own Custom Icon
 
@@ -274,8 +490,12 @@ flutter:
 Then reference it in the config:
 
 ```dart
-WagonWheelPitchProperties(
-  batsmanIconPath: 'assets/icons/ic_batsman.svg',
+WagonWheel(
+  pitch: WagonWheelPitchProperties(
+    batsman: WagonWheelBatsmanProperties(
+      iconPath: 'assets/icons/ic_batsman.svg',
+    ),
+  ),
 )
 ```
 
